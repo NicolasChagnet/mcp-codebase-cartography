@@ -9,7 +9,7 @@ MCP configuration `mcp.json`:
 ```json
 {
   "servers": {
-    "mcp-codebae-cartography": {
+    "mcp-codebase-cartography": {
       "type": "stdio",
       "command": "uvx",
       "args": ["mcp-codebase-cartography"]
@@ -17,6 +17,30 @@ MCP configuration `mcp.json`:
   }
 }
 ```
+
+### Building from source
+
+The server ships a native extension (`python-bindings/`) built with
+[maturin](https://www.maturin.rs). From `python-bindings/`, build and install
+it into the active virtual environment:
+
+```sh
+maturin develop --release
+```
+
+or build a wheel and install it:
+
+```sh
+maturin build --release
+pip install target/wheels/mcp_codebase_cartography-*.whl
+```
+
+### Repository root
+
+The server indexes the repository root, discovered from the process working
+directory by walking up until a VCS marker (`.git` or `.jj`) is found. Run the
+server from the repository root (or set the working directory of the MCP
+client to it) so the tools operate on the intended codebase.
 
 ## Tools
 
@@ -34,7 +58,7 @@ The various exposed tools by this server are:
 
 - `get_symbol_definition(symbol_name: string, file_path: string | undefined)`: Fetches the implementation code for a single symbol by name without returning the rest of the file. Returns the extracted source string of the AST node.
 
-- `get_downstream_refs(symbol_key: string, max_dept: int = 2)`: Performs a BFS search on the graph to list all downstream callers up to N steps deep. Helps evaluate impact before modifying code. Returns a list of caller symbols, file locations, and graph impact paths.
+- `get_downstream_refs(symbol_key: string, max_depth: int = 2)`: Performs a BFS search on the graph to list all downstream callers up to N steps deep. Helps evaluate impact before modifying code. Returns a list of caller symbols, file locations, and graph impact paths.
 
 - `get_upstream_refs(symbol_name: string)`: Finds all spots referencing this symbol in the codebase. Returns a list of files, line numbers, and caller contexts.
 
