@@ -1,17 +1,35 @@
 [project]
 name = "mcp-codebase-cartography"
 version = "0.1.0"
-description = "This repository hosts the code for an MCP server exposing various tools aimed at efficiently exploring codebases without wasting tokens, using AST-based tools and graph representations."
+description = "MCP server exposing AST-based tools and graph representations for efficiently exploring codebases."
 readme = "../README.md"
 authors = [
     { name = "Nicolas Chagnet", email = "nchagnet@protonmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "mcp>=2.0.0",
+]
 
 [project.scripts]
-python-bindings = "python_bindings:main"
+mcp-codebase-cartography = "mcp_codebase_cartography.server:main"
 
 [build-system]
-requires = ["uv_build>=0.12.5,<0.13.0"]
-build-backend = "uv_build"
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "python"
+module-name = "mcp_codebase_cartography._native"
+features = ["pyo3/extension-module"]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+[tool.pytest]
+testpaths = [
+    "tests"
+]
