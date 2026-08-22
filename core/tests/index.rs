@@ -81,6 +81,21 @@ fn filters_ignored_directories() {
 }
 
 #[test]
+fn respects_gitignore() {
+    let tmp = TempDir::new();
+    fs::write(tmp.path().join(".gitignore"), "ignored.txt\nbuild/\n").unwrap();
+    fs::write(tmp.path().join("keep.rs"), "fn main() {}").unwrap();
+    fs::write(tmp.path().join("ignored.txt"), "x").unwrap();
+    fs::create_dir_all(tmp.path().join("build")).unwrap();
+    fs::write(tmp.path().join("build/out.o"), "x").unwrap();
+
+    let engine = Engine::new(tmp.path()).unwrap();
+    let files = engine.list_files().unwrap();
+    let paths: Vec<_> = files.iter().map(|f| f.path.as_str()).collect();
+    assert_eq!(paths, vec!["keep.rs"]);
+}
+
+#[test]
 fn lists_files_in_deterministic_order() {
     let tmp = TempDir::new();
     for name in ["zeta.rs", "alpha.rs", "mid.rs"] {

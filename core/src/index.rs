@@ -91,39 +91,40 @@ impl Engine {
     }
 
     /// List all non-ignored regular files under the root, in deterministic
-    /// (sorted) order.
+    /// (sorted) order. Traversal uses the `ignore` crate so `.gitignore`,
+    /// hidden files, and standard ignored directories are handled
+    /// consistently.
     pub fn list_files(&self) -> std::io::Result<Vec<FileRecord>> {
         let mut records = Vec::new();
-        self.walk(self.root.path(), &mut records)?;
-        records.sort_by(|a, b| a.path.cmp(&b.path));
-        Ok(records)
-    }
-
-    fn walk(&self, dir: &Path, out: &mut Vec<FileRecord>) -> std::io::Result<()> {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if self.ignored.iter().any(|i| i == &name) {
+        let ignored = self.ignored.clone();
+        let mut walker = ignore::WalkBuilder::new(self.root.path());
+        walker
+            // Apply gitignore rules even outside a git repo (e.g. tests).
+            .require_git(false)
+            // Skip standard ignored directories by name without descending.
+            .filter_entry(move |entry| {
+                let name = entry.file_name();
+                !ignored.iter().any(|i| name == std::ffi::OsStr::new(i))
+            });
+        for result in walker.build() {
+            let entry = result.map_err(std::io::Error::other)?;
+            if !entry.file_type().is_some_and(|ft| ft.is_file()) {
                 continue;
             }
-            let path = entry.path();
-            let ft = entry.file_type()?;
-            if ft.is_dir() {
-                self.walk(&path, out)?;
-            } else if ft.is_file()
-                && let Ok(rel) = self.root.resolve_relative(&path)
-            {
-                let meta = entry.metadata()?;
-                out.push(FileRecord {
-                    path: rel,
-                    meta: FileMeta {
-                        len: meta.len(),
-                        modified: meta.modified()?,
-                    },
-                });
-            }
+            let Ok(rel) = self.root.resolve_relative(entry.path()) else {
+                continue;
+            };
+            let meta = entry.metadata().map_err(std::io::Error::other)?;
+            records.push(FileRecord {
+                path: rel,
+                meta: FileMeta {
+                    len: meta.len(),
+                    modified: meta.modified()?,
+                },
+            });
         }
-        Ok(())
+        records.sort_by(|a, b| a.path.cmp(&b.path));
+        Ok(records)
     }
 
     /// Load a file's bytes, using the cache and refreshing when metadata
