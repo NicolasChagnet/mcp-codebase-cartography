@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use core::index::Engine;
-use core::symbols::{get_file_outline, get_symbol_definition, SymbolError};
+use core::symbols::{SymbolError, get_file_outline, get_symbol_definition};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -15,10 +15,7 @@ struct TempDir(PathBuf);
 impl TempDir {
     fn new() -> Self {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "core-ast-test-{}-{n}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("core-ast-test-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         TempDir(dir)
@@ -72,7 +69,10 @@ pub trait Shape {
 
     let mut e = engine(&tmp);
     let syms = get_file_outline(&mut e, &tmp.path().join("src/lib.rs")).unwrap();
-    let kinds: Vec<_> = syms.iter().map(|s| (s.name.as_str(), s.kind.as_str())).collect();
+    let kinds: Vec<_> = syms
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
     assert_eq!(
         kinds,
         vec![
@@ -107,7 +107,10 @@ class Greeter:
 
     let mut e = engine(&tmp);
     let syms = get_file_outline(&mut e, &tmp.path().join("app.py")).unwrap();
-    let kinds: Vec<_> = syms.iter().map(|s| (s.name.as_str(), s.kind.as_str())).collect();
+    let kinds: Vec<_> = syms
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
     assert_eq!(
         kinds,
         vec![
@@ -139,7 +142,10 @@ export function helper(): void {}
 
     let mut e = engine(&tmp);
     let syms = get_file_outline(&mut e, &tmp.path().join("types.ts")).unwrap();
-    let kinds: Vec<_> = syms.iter().map(|s| (s.name.as_str(), s.kind.as_str())).collect();
+    let kinds: Vec<_> = syms
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
     assert_eq!(
         kinds,
         vec![
@@ -172,7 +178,10 @@ fn outline_nested_symbols_captured() {
 
     let mut e = engine(&tmp);
     let syms = get_file_outline(&mut e, &tmp.path().join("nested.rs")).unwrap();
-    let kinds: Vec<_> = syms.iter().map(|s| (s.name.as_str(), s.kind.as_str())).collect();
+    let kinds: Vec<_> = syms
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
     assert_eq!(
         kinds,
         vec![

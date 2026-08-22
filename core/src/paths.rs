@@ -37,7 +37,9 @@ impl RepoRoot {
         let mut dir = Some(start.as_path());
         while let Some(d) = dir {
             if d.join(".git").exists() || d.join(".jj").exists() {
-                return Ok(RepoRoot { root: d.to_path_buf() });
+                return Ok(RepoRoot {
+                    root: d.to_path_buf(),
+                });
             }
             dir = d.parent();
         }

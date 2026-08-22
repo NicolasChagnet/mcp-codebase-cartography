@@ -4,10 +4,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use core::compress::{get_compressed_file, CompressError};
+use core::compress::{CompressError, get_compressed_file};
 use core::index::Engine;
-use core::read::{read_file_range, ReadRangeError};
-use core::search::{search_codebase, SearchError};
+use core::read::{ReadRangeError, read_file_range};
+use core::search::{SearchError, search_codebase};
 use core::tree::get_codebase_map;
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -18,10 +18,7 @@ struct TempDir(PathBuf);
 impl TempDir {
     fn new() -> Self {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "core-tree-test-{}-{n}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("core-tree-test-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         TempDir(dir)

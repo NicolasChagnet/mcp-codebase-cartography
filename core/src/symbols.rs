@@ -18,7 +18,9 @@ pub enum SymbolError {
     /// No symbol with the requested name was found.
     NotFound,
     /// The name matched symbols in multiple files; `files` lists them.
-    Ambiguous { files: Vec<String> },
+    Ambiguous {
+        files: Vec<String>,
+    },
 }
 
 impl std::fmt::Display for SymbolError {

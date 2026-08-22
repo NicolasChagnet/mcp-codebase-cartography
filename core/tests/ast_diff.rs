@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use core::diff::{get_ast_diff, ChangeStatus, DiffError};
+use core::diff::{ChangeStatus, DiffError, get_ast_diff};
 use core::index::Engine;
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -16,10 +16,7 @@ struct TempDir(PathBuf);
 impl TempDir {
     fn new(tag: &str) -> Self {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "core-diff-{tag}-{}-{n}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("core-diff-{tag}-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         TempDir(dir)
@@ -114,7 +111,10 @@ fn git_ignores_formatting_only_edits() {
     );
 
     let got = changes(&tmp, "HEAD");
-    assert_eq!(got, vec![(ChangeStatus::Modified, "real".into(), "lib.rs".into())]);
+    assert_eq!(
+        got,
+        vec![(ChangeStatus::Modified, "real".into(), "lib.rs".into())]
+    );
 }
 
 #[test]
@@ -128,7 +128,10 @@ fn git_reports_untracked_files_as_added() {
     tmp.write("new.rs", "pub fn fresh() {}\n");
 
     let got = changes(&tmp, "HEAD");
-    assert_eq!(got, vec![(ChangeStatus::Added, "fresh".into(), "new.rs".into())]);
+    assert_eq!(
+        got,
+        vec![(ChangeStatus::Added, "fresh".into(), "new.rs".into())]
+    );
 }
 
 #[test]
@@ -150,13 +153,13 @@ fn git_binary_file_errors() {
     tmp.write("lib.rs", "pub fn foo() {}\n");
     git_commit(&tmp, "base");
 
-    // Untracked binary file with NUL bytes.
-    fs::write(tmp.path().join("blob.bin"), [0u8, 1, 2, 3]).unwrap();
+    // Untracked source file whose content is binary (NUL bytes).
+    fs::write(tmp.path().join("blob.rs"), [0u8, 1, 2, 3]).unwrap();
 
     let mut e = engine(&tmp);
     let err = get_ast_diff(&mut e, "HEAD").unwrap_err();
     match err {
-        DiffError::Binary { file } => assert_eq!(file, "blob.bin"),
+        DiffError::Binary { file } => assert_eq!(file, "blob.rs"),
         other => panic!("expected Binary, got {other:?}"),
     }
 }
@@ -169,7 +172,8 @@ fn jj_fallback_reports_symbol_changes() {
         "lib.rs",
         "pub fn foo() {}\n\npub fn bar() {\n    let x = 1;\n}\n",
     );
-    run(&tmp, &["jj", "describe", "-m", "base"]);
+    // Snapshot the base into a commit; `@-` is now the committed base.
+    run(&tmp, &["jj", "commit", "-m", "base"]);
 
     // Edit the working copy; `@-` is the committed base.
     tmp.write(

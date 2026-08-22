@@ -68,11 +68,7 @@ struct FileSink {
 impl Sink for FileSink {
     type Error = std::io::Error;
 
-    fn matched(
-        &mut self,
-        _searcher: &Searcher,
-        mat: &SinkMatch<'_>,
-    ) -> Result<bool, Self::Error> {
+    fn matched(&mut self, _searcher: &Searcher, mat: &SinkMatch<'_>) -> Result<bool, Self::Error> {
         if self.matches.len() >= self.max {
             return Ok(false);
         }
@@ -120,7 +116,12 @@ pub fn search_codebase(
             break;
         }
         if let Some(ext) = &ext {
-            let file_ext = rec.path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+            let file_ext = rec
+                .path
+                .rsplit('.')
+                .next()
+                .unwrap_or("")
+                .to_ascii_lowercase();
             if &file_ext != ext {
                 continue;
             }

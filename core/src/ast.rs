@@ -21,6 +21,10 @@ pub struct Symbol {
     pub start_byte: usize,
     /// Byte offset one past the declaration end.
     pub end_byte: usize,
+    /// Byte offset of the declaration's name node.
+    pub name_start_byte: usize,
+    /// Byte offset one past the declaration's name node.
+    pub name_end_byte: usize,
 }
 
 /// Parse `source` and return all top-level and nested symbols in document order.
@@ -74,7 +78,7 @@ fn collect(cursor: &mut TreeCursor, source: &str, out: &mut Vec<Symbol>) {
     loop {
         let node = cursor.node();
         if let Some(kind) = canonical_kind(node.kind())
-            && let Some(name) = node_name(&node, source)
+            && let Some((name, name_start_byte, name_end_byte)) = node_name(&node, source)
         {
             out.push(Symbol {
                 name,
@@ -83,6 +87,8 @@ fn collect(cursor: &mut TreeCursor, source: &str, out: &mut Vec<Symbol>) {
                 line_end: node.end_position().row + 1,
                 start_byte: node.start_byte(),
                 end_byte: node.end_byte(),
+                name_start_byte,
+                name_end_byte,
             });
         }
         if cursor.goto_first_child() {
@@ -95,16 +101,17 @@ fn collect(cursor: &mut TreeCursor, source: &str, out: &mut Vec<Symbol>) {
     }
 }
 
-/// Extract a declaration's name, preferring the `name` field and falling back
-/// to the first identifier-like descendant outside any nested declaration.
-fn node_name(node: &Node, source: &str) -> Option<String> {
+/// Extract a declaration's name and its byte range, preferring the `name`
+/// field and falling back to the first identifier-like descendant outside any
+/// nested declaration.
+fn node_name(node: &Node, source: &str) -> Option<(String, usize, usize)> {
     if let Some(name) = node.child_by_field_name("name") {
-        return text(&name, source);
+        return text(&name, source).map(|t| (t, name.start_byte(), name.end_byte()));
     }
     first_name(node, source)
 }
 
-fn first_name(node: &Node, source: &str) -> Option<String> {
+fn first_name(node: &Node, source: &str) -> Option<(String, usize, usize)> {
     let mut cursor = node.walk();
     if !cursor.goto_first_child() {
         return None;
@@ -117,7 +124,7 @@ fn first_name(node: &Node, source: &str) -> Option<String> {
                 child.kind(),
                 "identifier" | "field_identifier" | "type_identifier"
             ) {
-                return text(&child, source);
+                return text(&child, source).map(|t| (t, child.start_byte(), child.end_byte()));
             }
             if let Some(name) = first_name(&child, source) {
                 return Some(name);

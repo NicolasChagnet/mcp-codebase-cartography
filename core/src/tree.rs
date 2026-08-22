@@ -98,7 +98,11 @@ fn render_into(node: &Node, depth: usize, max_depth: usize, prefix: &str, out: &
             if depth + 1 < max_depth {
                 render_into(child, depth + 1, max_depth, &child_prefix, out);
             } else if !child.children.is_empty() {
-                let _ = writeln!(out, "{child_prefix}└── ... ({} entries)", child.children.len());
+                let _ = writeln!(
+                    out,
+                    "{child_prefix}└── ... ({} entries)",
+                    child.children.len()
+                );
             }
         }
     }

@@ -15,10 +15,7 @@ struct TempDir(PathBuf);
 impl TempDir {
     fn new() -> Self {
         let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "core-index-test-{}-{n}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("core-index-test-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         TempDir(dir)
