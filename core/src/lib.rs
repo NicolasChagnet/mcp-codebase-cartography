@@ -7,13 +7,23 @@
 
 pub mod ast;
 pub mod cache;
+pub mod compress;
+pub mod diff;
 pub mod index;
 pub mod languages;
 pub mod paths;
+pub mod read;
+pub mod search;
 pub mod symbols;
+pub mod tree;
 
 pub use ast::Symbol;
+pub use compress::{get_compressed_file, CompressError};
+pub use diff::{get_ast_diff, ChangeStatus, DiffError, SymbolChange};
 pub use index::{Engine, FileRecord, ReadError};
 pub use languages::Language;
 pub use paths::{PathError, RepoRoot};
+pub use read::{read_file_range, ReadRangeError};
+pub use search::{search_codebase, SearchError, SearchMatch};
 pub use symbols::{get_file_outline, get_symbol_definition, SymbolError};
+pub use tree::{get_codebase_map, TreeError};
