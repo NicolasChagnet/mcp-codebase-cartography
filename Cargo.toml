@@ -1,0 +1,8 @@
+[workspace]
+resolver = "3"
+members = ["core", "python-bindings"]
+
+[package]
+name = "mcp-codebase-cartography"
+version = "0.1.0"
+edition = "2024"

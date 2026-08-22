@@ -1,0 +1,17 @@
+[project]
+name = "mcp-codebase-cartography"
+version = "0.1.0"
+description = "This repository hosts the code for an MCP server exposing various tools aimed at efficiently exploring codebases without wasting tokens, using AST-based tools and graph representations."
+readme = "../README.md"
+authors = [
+    { name = "Nicolas Chagnet", email = "nchagnet@protonmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+python-bindings = "python_bindings:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
