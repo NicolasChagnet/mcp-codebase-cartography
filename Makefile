@@ -1,11 +1,11 @@
 .PHONY: lint test ci fmt lint-rust lint-py test-rust test-py
 
-lint-rust:
+lint-py:
 	@echo "Running Python linting..."
 	@uvx ruff check python-bindings
 	@uv --directory python-bindings run pyrefly check
 
-lint-py:
+lint-rust:
 	@echo "Running Rust linting"
 	@cargo fmt --check
 	@cargo clippy --all-targets --all-features -- -D warnings
