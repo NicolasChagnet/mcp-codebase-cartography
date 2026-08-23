@@ -42,3 +42,42 @@ impl<V> Cache<V> {
         self.entries.insert(key, (meta, value));
     }
 }
+
+/// A single-value cache that can be refreshed and cleared. Used for the
+/// Engine's file inventory and symbol graph, which are rebuilt lazily when
+/// the underlying repository state changes.
+pub struct Snapshot<V> {
+    value: Option<V>,
+}
+
+impl<V> Default for Snapshot<V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<V> Snapshot<V> {
+    pub fn new() -> Self {
+        Snapshot { value: None }
+    }
+
+    /// The cached value, if any.
+    pub fn get(&self) -> Option<&V> {
+        self.value.as_ref()
+    }
+
+    /// The cached value, if any, as mutable.
+    pub fn get_mut(&mut self) -> Option<&mut V> {
+        self.value.as_mut()
+    }
+
+    /// Replace the cached value, returning the previous one.
+    pub fn replace(&mut self, value: V) -> Option<V> {
+        self.value.replace(value)
+    }
+
+    /// Drop the cached value.
+    pub fn clear(&mut self) {
+        self.value = None;
+    }
+}

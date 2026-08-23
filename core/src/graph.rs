@@ -46,8 +46,10 @@ struct RawSite {
 }
 
 impl SymbolGraph {
-    /// Build the graph from all indexed files.
-    pub fn build(engine: &mut Engine) -> Result<Self, RefError> {
+    /// Build the graph from all indexed files. Called lazily by
+    /// [`Engine::graph`]; callers should go through the engine's cached
+    /// accessor rather than building a graph per query.
+    pub(crate) fn build(engine: &mut Engine) -> Result<Self, RefError> {
         let mut graph = SymbolGraph {
             keys: HashMap::new(),
             graph: DiGraph::new(),

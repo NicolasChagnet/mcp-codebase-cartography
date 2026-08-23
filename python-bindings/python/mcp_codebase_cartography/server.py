@@ -8,6 +8,7 @@ import os
 import sys
 
 from mcp.server import MCPServer
+
 from mcp_codebase_cartography import _native
 
 logger = logging.getLogger(__name__)
@@ -56,12 +57,12 @@ def build_server(root: str | None = None) -> MCPServer:
 
     @server.tool()
     async def get_upstream_refs(symbol_name: str) -> list:
-        """Return the reference sites for a symbol: every file and line where the queried symbol is referenced, called, or used. These are the symbol's direct dependents/callers. Paths are workspace-relative. Resolution is name-based/lexical; if the name is defined in multiple files, an ambiguity error is raised."""
+        """Find every reference site for this symbol: the files and lines where it is called, used, or referenced across the codebase. Upstream results are direct reference sites with workspace-relative paths and the surrounding source line as context. Resolution is conservative and name-based (lexical); a name defined in multiple files yields an ambiguity error where applicable."""
         return engine.get_upstream_refs(symbol_name)
 
     @server.tool()
     async def get_downstream_refs(symbol_key: str, max_depth: int = 2) -> dict:
-        """Return the transitive callers/impact of a symbol: the symbols and files that depend on, call, or reference the queried symbol, traversed up to max_depth hops. Returns caller records and impact paths. Paths are workspace-relative. Resolution is name-based/lexical; pass `file:name` to disambiguate."""
+        """List the transitive callers and impact paths of this symbol: the symbols and files that depend on, call, or reference it, traversed up to max_depth hops. Downstream results are a transitive caller/impact traversal controlled by max_depth, with workspace-relative paths. symbol_key is a bare name or file:name to disambiguate; resolution is conservative and name-based (lexical) with ambiguity errors where applicable."""
         return engine.get_downstream_refs(symbol_key, max_depth)
 
     @server.tool()

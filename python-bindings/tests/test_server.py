@@ -55,20 +55,22 @@ async def test_tool_defaults_and_optional_args(server):
 
 
 @pytest.mark.anyio
-async def test_reference_tool_descriptions_explain_direction(server):
+async def test_reference_tool_descriptions(server):
     tools = {t.name: t.description for t in await server.list_tools()}
+    upstream = tools["get_upstream_refs"].lower()
+    downstream = tools["get_downstream_refs"].lower()
 
-    upstream = tools["get_upstream_refs"]
-    assert "referenced, called, or used" in upstream
-    assert "reference sites" in upstream
-    assert "workspace-relative" in upstream
-    assert "ambiguity" in upstream
-
-    downstream = tools["get_downstream_refs"]
-    assert "depend on, call, or reference" in downstream
-    assert "max_depth" in downstream
+    # Directional semantics: upstream = direct reference sites, downstream =
+    # transitive caller/impact traversal.
+    assert "reference site" in upstream
     assert "transitive" in downstream
+    # Depth behavior is documented on the downstream tool.
+    assert "max_depth" in downstream
+    # Shared contract details: workspace-relative paths and lexical resolution.
+    assert "workspace-relative" in upstream
     assert "workspace-relative" in downstream
+    assert "lexical" in upstream
+    assert "lexical" in downstream
 
 
 @pytest.mark.anyio

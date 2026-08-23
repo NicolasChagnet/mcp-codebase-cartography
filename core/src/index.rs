@@ -1,11 +1,13 @@
 //! The shared repository index engine.
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::{Mutex, MutexGuard};
 
-use crate::cache::{Cache, FileMeta};
+use crate::cache::{Cache, FileMeta, Snapshot};
+use crate::graph::SymbolGraph;
 use crate::paths::{PathError, RepoRoot};
+use crate::refs::RefError;
 
 /// Default directory/file names that are always ignored.
 const DEFAULT_IGNORED: &[&str] = &[
@@ -65,7 +67,10 @@ pub struct Engine {
     root: RepoRoot,
     ignored: Vec<String>,
     cache: Cache<Vec<u8>>,
-    symbols: HashMap<String, Vec<String>>,
+    /// Cached file inventory, refreshed when the on-disk state changes.
+    files: Mutex<Snapshot<Vec<FileRecord>>>,
+    /// Lazy symbol graph, invalidated whenever the file inventory changes.
+    graph: Mutex<Snapshot<SymbolGraph>>,
 }
 
 impl Engine {
@@ -76,7 +81,8 @@ impl Engine {
             root,
             ignored: DEFAULT_IGNORED.iter().map(|s| s.to_string()).collect(),
             cache: Cache::new(),
-            symbols: HashMap::new(),
+            files: Mutex::new(Snapshot::new()),
+            graph: Mutex::new(Snapshot::new()),
         })
     }
 
@@ -93,8 +99,14 @@ impl Engine {
     /// List all non-ignored regular files under the root, in deterministic
     /// (sorted) order. Traversal uses the `ignore` crate so `.gitignore`,
     /// hidden files, and standard ignored directories are handled
-    /// consistently.
+    /// consistently. The result is cached and refreshed only when the
+    /// on-disk file set or metadata changes.
     pub fn list_files(&self) -> std::io::Result<Vec<FileRecord>> {
+        self.files()
+    }
+
+    /// Walk the filesystem and return the current file snapshot.
+    fn walk_files(&self) -> std::io::Result<Vec<FileRecord>> {
         let mut records = Vec::new();
         let ignored = self.ignored.clone();
         let mut walker = ignore::WalkBuilder::new(self.root.path());
@@ -127,6 +139,22 @@ impl Engine {
         Ok(records)
     }
 
+    /// Return the current file snapshot, refreshing the cache when the
+    /// on-disk state changed. Edits, additions, deletions, and ignore/config
+    /// changes all surface as a different snapshot (paths and/or metadata),
+    /// so the cached inventory is reused only while it stays accurate. When
+    /// the snapshot changes, the symbol graph cache is invalidated so
+    /// downstream queries never reuse stale state.
+    fn files(&self) -> std::io::Result<Vec<FileRecord>> {
+        let fresh = self.walk_files()?;
+        let mut slot = self.files.lock().unwrap();
+        if slot.get() != Some(&fresh) {
+            slot.replace(fresh.clone());
+            self.graph.lock().unwrap().clear();
+        }
+        Ok(fresh)
+    }
+
     /// Load a file's bytes, using the cache and refreshing when metadata
     /// changes. Rejects binary files.
     pub fn read_file(&mut self, path: &Path) -> Result<Vec<u8>, ReadError> {
@@ -148,13 +176,15 @@ impl Engine {
         Ok(bytes)
     }
 
-    /// Store symbol -> reference locations.
-    pub fn set_symbol_refs(&mut self, symbol: &str, refs: Vec<String>) {
-        self.symbols.insert(symbol.to_string(), refs);
-    }
-
-    /// Look up stored references for a symbol.
-    pub fn symbol_refs(&self, symbol: &str) -> Option<&[String]> {
-        self.symbols.get(symbol).map(Vec::as_slice)
+    /// Return the cached symbol graph, building it lazily and rebuilding when
+    /// the file snapshot changes. Callers never build or invalidate the cache
+    /// themselves.
+    pub(crate) fn graph(&mut self) -> Result<MutexGuard<'_, Snapshot<SymbolGraph>>, RefError> {
+        self.files()?;
+        if self.graph.lock().unwrap().get().is_none() {
+            let g = SymbolGraph::build(self)?;
+            self.graph.lock().unwrap().replace(g);
+        }
+        Ok(self.graph.lock().unwrap())
     }
 }

@@ -6,7 +6,6 @@
 //! resolution is not available; a name defined in multiple files yields
 //! multiple candidate edges rather than a guess.
 
-use crate::graph::SymbolGraph;
 use crate::index::{Engine, ReadError};
 use crate::paths::PathError;
 
@@ -93,12 +92,13 @@ impl From<std::io::Error> for RefError {
 /// Find all spots referencing `symbol_name` across the codebase.
 ///
 /// Returns every identifier/call site whose text matches the symbol name,
-/// with file, line, and the surrounding source line as context. These are the
-/// symbol's direct dependents/callers (who references, calls, or uses it).
-/// Paths are workspace-relative. Errors with [`RefError::NotFound`] if no
-/// definition with that name exists.
+/// with file, line, and the surrounding source line as context. These are
+/// the direct reference sites of the queried symbol; paths are
+/// workspace-relative. Errors with [`RefError::NotFound`] if no definition
+/// with that name exists.
 pub fn get_upstream_refs(engine: &mut Engine, symbol_name: &str) -> Result<Vec<RefSpot>, RefError> {
-    let graph = SymbolGraph::build(engine)?;
+    let graph = engine.graph()?;
+    let graph = graph.get().unwrap();
     if !graph.has_name(symbol_name) {
         return Err(RefError::NotFound);
     }
@@ -113,12 +113,20 @@ pub fn get_upstream_refs(engine: &mut Engine, symbol_name: &str) -> Result<Vec<R
 /// disambiguate. Performs a bounded BFS over the reference graph following
 /// reverse edges (who references the symbol), returning caller records and
 /// impact paths. Paths are workspace-relative.
+/// `symbol_key` is either a bare symbol name or `file:name` to disambiguate.
+/// Performs a bounded BFS over the reference graph following reverse edges
+/// (who references the symbol), returning caller records and impact paths.
+/// This is a transitive caller/impact traversal controlled by `max_depth`;
+/// paths are workspace-relative. Resolution is conservative and name-based
+/// (lexical), so a name defined in multiple files yields
+/// [`RefError::Ambiguous`].
 pub fn get_downstream_refs(
     engine: &mut Engine,
     symbol_key: &str,
     max_depth: usize,
 ) -> Result<DownstreamResult, RefError> {
-    let graph = SymbolGraph::build(engine)?;
+    let graph = engine.graph()?;
+    let graph = graph.get().unwrap();
     let key = graph.resolve_key(symbol_key)?;
     let (callers, paths) = graph.downstream(&key, max_depth);
     Ok(DownstreamResult { callers, paths })

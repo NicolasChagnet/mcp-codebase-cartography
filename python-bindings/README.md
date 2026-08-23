@@ -48,3 +48,10 @@ Result shapes are plain Python lists and dicts:
 - `get_upstream_refs` → `[{file, line, context}]`
 - `get_downstream_refs` → `{callers: [{symbol, kind, file, line_start, line_end, depth}], paths: [{path}]}`
 - `get_ast_diff` → `[{status, name, kind, file, line_start, line_end, summary}]`
+
+Reference direction: `get_upstream_refs` returns direct reference sites (the
+files/lines where the queried symbol is called, used, or referenced);
+`get_downstream_refs` returns the transitive callers/impact of the queried
+symbol, bounded by `max_depth`. Paths are workspace-relative and resolution is
+conservative name-based (lexical), with ambiguity errors where a name is
+defined in multiple files.

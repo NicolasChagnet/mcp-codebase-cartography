@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use core::index::{Engine, ReadError};
 use core::paths::PathError;
+use core::refs::get_upstream_refs;
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -130,13 +131,37 @@ fn rejects_binary_files() {
 }
 
 #[test]
-fn stores_and_retrieves_symbol_refs() {
+fn graph_cache_refreshes_after_edit() {
     let tmp = TempDir::new();
+    let file = tmp.path().join("lib.rs");
+    fs::write(&file, "fn foo() {}\nfn bar() { foo(); }\n").unwrap();
+
     let mut engine = Engine::new(tmp.path()).unwrap();
-    engine.set_symbol_refs("foo", vec!["a.rs:1".into(), "b.rs:2".into()]);
-    assert_eq!(
-        engine.symbol_refs("foo").unwrap(),
-        &["a.rs:1".to_string(), "b.rs:2".to_string()]
-    );
-    assert!(engine.symbol_refs("missing").is_none());
+    let before = get_upstream_refs(&mut engine, "foo").unwrap();
+    assert!(before.iter().any(|s| s.line == 2));
+
+    // Edit the file so `bar` no longer references `foo`.
+    fs::write(&file, "fn foo() {}\nfn bar() {}\n").unwrap();
+    let after = get_upstream_refs(&mut engine, "foo").unwrap();
+    assert!(!after.iter().any(|s| s.line == 2));
+}
+
+#[test]
+fn graph_cache_refreshes_after_file_creation_and_removal() {
+    let tmp = TempDir::new();
+    fs::write(tmp.path().join("lib.rs"), "fn foo() {}\n").unwrap();
+
+    let mut engine = Engine::new(tmp.path()).unwrap();
+    assert!(get_upstream_refs(&mut engine, "foo").is_ok());
+
+    // A new file referencing `foo` must be picked up.
+    let other = tmp.path().join("other.rs");
+    fs::write(&other, "fn bar() { foo(); }\n").unwrap();
+    let spots = get_upstream_refs(&mut engine, "foo").unwrap();
+    assert!(spots.iter().any(|s| s.file == "other.rs"));
+
+    // Removing that file must drop its reference sites.
+    fs::remove_file(&other).unwrap();
+    let spots = get_upstream_refs(&mut engine, "foo").unwrap();
+    assert!(!spots.iter().any(|s| s.file == "other.rs"));
 }
