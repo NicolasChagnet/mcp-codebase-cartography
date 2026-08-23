@@ -144,5 +144,8 @@ fn closing_delimiter(span: &str) -> Option<Closing<'_>> {
         return None;
     }
     let pos = trimmed.len() - last.len_utf8();
-    Some(Closing { pos, text: &trimmed[pos..] })
+    Some(Closing {
+        pos,
+        text: &trimmed[pos..],
+    })
 }

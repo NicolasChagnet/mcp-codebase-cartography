@@ -32,7 +32,7 @@ the absolute path of the discovered root.
 The extension mirrors the MCP tool contract. Argument defaults match the
 server registration:
 
-- `get_codebase_map(max_depth: int = 2) -> str`
+- `get_codebase_map(max_depth: int = 2) -> dict`
 - `get_compressed_file(file_path: str) -> str`
 - `search_codebase(pattern: str, extension: str | None = None, max_results: int = 10) -> list`
 - `get_file_outline(file_path: str) -> list`

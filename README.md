@@ -46,9 +46,9 @@ client to it) so the tools operate on the intended codebase.
 
 The various exposed tools by this server are:
 
-- `get_codebase_map(max_depth: int = 2)`: Returns the root folder directory tree, filtering out ignored files (.git, node_modules, build dirs). Shows file roles and structural layout to give the agent a macro overview.
+- `get_codebase_map(max_depth: int = 2)`: Returns the root folder directory tree as a structured object, filtering out ignored files (.git, node_modules, build dirs). Each node has a `name`, workspace-relative `path`, `kind` (`dir` or `file`), and nested `children`; directories truncated by `max_depth` carry a `collapsed_entries` count of omitted entries. Gives the agent a macro overview of the structural layout.
 
-- `get_compressed_file(file_path: string)`: Preferred over standard file reading. Returns a file's imports, type declarations, docstrings, and function signatures with body logic stripped and replaced by line counts (e.g., // [Body hidden: 45 lines]).
+- `get_compressed_file(file_path: string)`: Preferred over standard file reading. Returns a file's imports, type declarations, docstrings, and function signatures with body logic stripped and replaced by line counts (e.g., // [Body hidden: 45 lines]). Opening and closing delimiters are preserved so the output stays syntactically unambiguous.
 
 - `search_codebase(pattern: string, extension: string | undefined, max_results: int = 10)`: Runs regex search over indexed files using an ultra-fast in-memory/ripgrep backend. Returns matching files and snippets truncated to 1 line of context.
 
