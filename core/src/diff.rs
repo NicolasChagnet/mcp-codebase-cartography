@@ -75,6 +75,9 @@ enum Vcs {
 pub fn get_ast_diff(engine: &mut Engine, base_ref: &str) -> Result<Vec<SymbolChange>, DiffError> {
     let root = engine.root().to_path_buf();
     let vcs = detect_vcs(&root).ok_or(DiffError::NoVcs)?;
+    if vcs == Vcs::Jj {
+        ensure_jj_available(&root)?;
+    }
     validate_ref(&root, vcs, base_ref)?;
 
     let base_files = list_base_files(&root, vcs, base_ref)?;
@@ -139,6 +142,25 @@ fn detect_vcs(root: &Path) -> Option<Vcs> {
         Some(Vcs::Git)
     } else {
         None
+    }
+}
+
+/// Ensure the `jj` executable is available before running any JJ command.
+///
+/// A missing executable is reported as a clear, structured error rather than a
+/// generic "failed to run jj" surfaced mid-diff. Only called on the `Vcs::Jj`
+/// path; Git repositories never probe for `jj`.
+fn ensure_jj_available(root: &Path) -> Result<(), DiffError> {
+    match Command::new("jj")
+        .arg("--version")
+        .current_dir(root)
+        .output()
+    {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(DiffError::Command(
+            "jj executable not found; jj is required for jj-backed repositories".to_string(),
+        )),
+        Err(e) => Err(DiffError::Command(format!("failed to run jj: {e}"))),
     }
 }
 

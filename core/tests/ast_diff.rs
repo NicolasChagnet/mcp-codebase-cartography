@@ -189,6 +189,64 @@ fn jj_fallback_reports_symbol_changes() {
 }
 
 #[test]
+fn jj_colocated_with_git_resolves_via_jj() {
+    let tmp = TempDir::new("colocated");
+    run(&tmp, &["jj", "git", "init"]);
+    // `jj git init` colocates by default: both markers are present.
+    assert!(tmp.path().join(".jj").exists());
+    assert!(tmp.path().join(".git").exists());
+
+    tmp.write("lib.rs", "pub fn foo() {}\n");
+    run(&tmp, &["jj", "commit", "-m", "base"]);
+    tmp.write("lib.rs", "pub fn bar() {}\n");
+
+    // `@-` is a JJ revset; resolving it proves the JJ path was taken despite
+    // the colocated `.git` marker.
+    let got = changes(&tmp, "@-");
+    assert!(got.contains(&(ChangeStatus::Deleted, "foo".into(), "lib.rs".into())));
+    assert!(got.contains(&(ChangeStatus::Added, "bar".into(), "lib.rs".into())));
+}
+
+#[test]
+fn jj_missing_executable_errors_clearly() {
+    let tmp = TempDir::new("jjmissing");
+    run(&tmp, &["jj", "git", "init"]);
+    tmp.write("lib.rs", "pub fn foo() {}\n");
+    run(&tmp, &["jj", "commit", "-m", "base"]);
+
+    // Re-exec this test binary with a PATH that cannot find `jj`, running only
+    // the child scenario. This simulates a missing `jj` without touching the
+    // real environment.
+    let exe = std::env::current_exe().unwrap();
+    let empty_bin = TempDir::new("emptybin");
+    let status = Command::new(exe)
+        .args(["--exact", "jj_missing_executable_child"])
+        .env("PATH", empty_bin.path())
+        .env("JJ_MISSING_REPO", tmp.path())
+        .status()
+        .unwrap();
+    assert!(status.success(), "child scenario failed");
+}
+
+#[test]
+fn jj_missing_executable_child() {
+    let Ok(repo) = std::env::var("JJ_MISSING_REPO") else {
+        return; // not the re-executed child
+    };
+    let mut e = Engine::new(Path::new(&repo)).unwrap();
+    let err = get_ast_diff(&mut e, "@-").unwrap_err();
+    match err {
+        DiffError::Command(msg) => {
+            assert!(
+                msg.contains("jj executable not found"),
+                "unexpected message: {msg}"
+            );
+        }
+        other => panic!("expected Command error, got {other:?}"),
+    }
+}
+
+#[test]
 fn no_vcs_errors() {
     let tmp = TempDir::new("novcs");
     tmp.write("lib.rs", "pub fn foo() {}\n");
