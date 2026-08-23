@@ -17,7 +17,6 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 EXPECTED_TOOLS = {
     "get_codebase_map",
     "get_compressed_file",
-    "read_file_range",
     "search_codebase",
     "get_file_outline",
     "get_symbol_definition",
@@ -33,7 +32,7 @@ def server():
 
 
 @pytest.mark.anyio
-async def test_all_nine_tools_registered(server):
+async def test_all_eight_tools_registered(server):
     tools = await server.list_tools()
     names = {t.name for t in tools}
     assert names == EXPECTED_TOOLS

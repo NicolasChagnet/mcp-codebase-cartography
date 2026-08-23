@@ -53,22 +53,6 @@ impl Engine {
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
-    /// Read lines `start_line..=end_line` (1-indexed) with relative numbers.
-    fn read_file_range(
-        &mut self,
-        file_path: &str,
-        start_line: usize,
-        end_line: usize,
-    ) -> PyResult<String> {
-        cartography_core::read::read_file_range(
-            &mut self.engine,
-            Path::new(file_path),
-            start_line,
-            end_line,
-        )
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))
-    }
-
     /// Regex search over indexed files, returning up to `max_results` matches.
     #[pyo3(signature = (pattern, extension=None, max_results=10))]
     fn search_codebase(

@@ -50,8 +50,6 @@ The various exposed tools by this server are:
 
 - `get_compressed_file(file_path: string)`: Preferred over standard file reading. Returns a file's imports, type declarations, docstrings, and function signatures with body logic stripped and replaced by line counts (e.g., // [Body hidden: 45 lines]).
 
-- `read_file_range(file_path: string, start_line: int, end_line: int)`: Reads a slice of lines from a specific file. Used after identifying exact method coordinates using `get_file_outline` or `get_compressed_file`. Returns a plaintext slice with relative line numbers.
-
 - `search_codebase(pattern: string, extension: string | undefined, max_results: int = 10)`: Runs regex search over indexed files using an ultra-fast in-memory/ripgrep backend. Returns matching files and snippets truncated to 1 line of context.
 
 - `get_file_outline(file_path: string)` Parses AST to return classes, functions, and interfaces along with their line ranges and AST node kinds. Returns a JSON list of symbols containing name, kind, line_start, and line_end.

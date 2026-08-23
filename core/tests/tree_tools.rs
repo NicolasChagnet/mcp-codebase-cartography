@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use core::compress::{CompressError, get_compressed_file};
 use core::index::Engine;
-use core::read::{ReadRangeError, read_file_range};
 use core::search::{SearchError, search_codebase};
 use core::tree::{MapNodeKind, get_codebase_map};
 
@@ -145,46 +144,6 @@ fn compressed_file_rejects_unsupported() {
     let mut e = engine(&tmp);
     let err = get_compressed_file(&mut e, &tmp.path().join("notes.txt")).unwrap_err();
     assert!(matches!(err, CompressError::Unsupported));
-}
-
-#[test]
-fn read_file_range_uses_relative_numbers() {
-    let tmp = TempDir::new();
-    tmp.write("a.txt", "one\ntwo\nthree\nfour\n");
-
-    let mut e = engine(&tmp);
-    let out = read_file_range(&mut e, &tmp.path().join("a.txt"), 2, 3).unwrap();
-    assert_eq!(out, "1: two\n2: three\n");
-}
-
-#[test]
-fn read_file_range_clamps_end_line() {
-    let tmp = TempDir::new();
-    tmp.write("a.txt", "one\ntwo\n");
-
-    let mut e = engine(&tmp);
-    let out = read_file_range(&mut e, &tmp.path().join("a.txt"), 1, 99).unwrap();
-    assert_eq!(out, "1: one\n2: two\n");
-}
-
-#[test]
-fn read_file_range_rejects_invalid_bounds() {
-    let tmp = TempDir::new();
-    tmp.write("a.txt", "one\ntwo\n");
-
-    let mut e = engine(&tmp);
-    assert!(matches!(
-        read_file_range(&mut e, &tmp.path().join("a.txt"), 0, 2),
-        Err(ReadRangeError::InvalidRange)
-    ));
-    assert!(matches!(
-        read_file_range(&mut e, &tmp.path().join("a.txt"), 3, 2),
-        Err(ReadRangeError::InvalidRange)
-    ));
-    assert!(matches!(
-        read_file_range(&mut e, &tmp.path().join("a.txt"), 5, 6),
-        Err(ReadRangeError::InvalidRange)
-    ));
 }
 
 #[test]

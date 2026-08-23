@@ -34,7 +34,6 @@ server registration:
 
 - `get_codebase_map(max_depth: int = 2) -> str`
 - `get_compressed_file(file_path: str) -> str`
-- `read_file_range(file_path: str, start_line: int, end_line: int) -> str`
 - `search_codebase(pattern: str, extension: str | None = None, max_results: int = 10) -> list`
 - `get_file_outline(file_path: str) -> list`
 - `get_symbol_definition(symbol_name: str, file_path: str | None = None) -> str`

@@ -13,7 +13,6 @@ pub mod graph;
 pub mod index;
 pub mod languages;
 pub mod paths;
-pub mod read;
 pub mod refs;
 pub mod search;
 pub mod symbols;
@@ -25,7 +24,6 @@ pub use diff::{ChangeStatus, DiffError, SymbolChange, get_ast_diff};
 pub use index::{Engine, FileRecord, ReadError};
 pub use languages::Language;
 pub use paths::{PathError, RepoRoot};
-pub use read::{ReadRangeError, read_file_range};
 pub use refs::{
     CallerRecord, DownstreamResult, ImpactPath, RefError, RefSpot, get_downstream_refs,
     get_upstream_refs,

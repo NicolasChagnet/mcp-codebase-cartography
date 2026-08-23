@@ -7,15 +7,15 @@ import logging
 import os
 import sys
 
-from mcp_codebase_cartography import _native
 from mcp.server import MCPServer
+from mcp_codebase_cartography import _native
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
 
 
 def build_server(root: str | None = None) -> MCPServer:
-    """Create the MCP server with all nine documented tools.
+    """Create the MCP server with all eight documented tools.
 
     A single native ``Engine`` is instantiated over the repository root (the
     process working directory by default) and shared by every tool handler.
@@ -34,11 +34,6 @@ def build_server(root: str | None = None) -> MCPServer:
     async def get_compressed_file(file_path: str) -> str:
         """Return a file's imports, type declarations, docstrings, and function signatures."""
         return engine.get_compressed_file(file_path)
-
-    @server.tool()
-    async def read_file_range(file_path: str, start_line: int, end_line: int) -> str:
-        """Read a slice of lines from a specific file with relative line numbers."""
-        return engine.read_file_range(file_path, start_line, end_line)
 
     @server.tool()
     async def search_codebase(

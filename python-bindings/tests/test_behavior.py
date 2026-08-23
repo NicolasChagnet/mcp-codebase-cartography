@@ -122,52 +122,6 @@ async def test_compressed_file(server):
 
 
 @pytest.mark.anyio
-async def test_read_file_range_relative_numbers(server):
-    text = (
-        (
-            await server.call_tool(
-                "read_file_range",
-                {"file_path": "src/app.py", "start_line": 1, "end_line": 3},
-            )
-        )
-        .content[0]
-        .text
-    )
-    lines = text.splitlines()
-    assert lines[0].startswith("1: ")
-    assert lines[1].startswith("2: ")
-    assert lines[2].startswith("3: ")
-    assert "import os" in lines[0]
-    assert "from util import helper" in lines[1]
-
-
-@pytest.mark.anyio
-async def test_read_file_range_clamps_end(server):
-    text = (
-        (
-            await server.call_tool(
-                "read_file_range",
-                {"file_path": "src/app.py", "start_line": 1, "end_line": 999},
-            )
-        )
-        .content[0]
-        .text
-    )
-    last = text.splitlines()[-1]
-    assert last.startswith(f"{len(APP_PY.splitlines())}: ")
-    assert "return helper()" in last
-
-
-@pytest.mark.anyio
-async def test_read_file_range_invalid(server):
-    with pytest.raises(ToolError, match="invalid line range"):
-        await server.call_tool(
-            "read_file_range",
-            {"file_path": "src/app.py", "start_line": 0, "end_line": 3},
-        )
-
-
-@pytest.mark.anyio
 async def test_compressed_file_keeps_closing_delimiters(server):
     text = (
         (await server.call_tool("get_compressed_file", {"file_path": "src/util.rs"}))
