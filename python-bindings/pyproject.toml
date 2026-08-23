@@ -1,7 +1,7 @@
 [project]
 name = "mcp-codebase-cartography"
-version = "0.1.0"
 description = "MCP server exposing AST-based tools and graph representations for efficiently exploring codebases."
+dynamic = ["version"]
 readme = "../README.md"
 authors = [
     { name = "Nicolas Chagnet", email = "nchagnet@protonmail.com" }
@@ -18,6 +18,7 @@ test = [
 ]
 
 [project.scripts]
+mcp-codebase-cartography = "mcp_codebase_cartography.server:main"
 serve = "mcp_codebase_cartography.server:main"
 
 [build-system]
