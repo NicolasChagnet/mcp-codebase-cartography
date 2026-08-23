@@ -72,7 +72,6 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Publish to PyPI
-        working-directory: dist
         run: uv publish
 
   github-release:
