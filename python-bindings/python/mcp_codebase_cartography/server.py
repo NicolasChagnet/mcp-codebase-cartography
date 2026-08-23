@@ -3,11 +3,15 @@
 stdout is reserved for MCP protocol messages; nothing else is written to it.
 """
 
+import logging
 import os
-
-from mcp.server import MCPServer
+import sys
 
 from mcp_codebase_cartography import _native
+from mcp.server import MCPServer
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
 
 
 def build_server(root: str | None = None) -> MCPServer:
@@ -75,6 +79,7 @@ def build_server(root: str | None = None) -> MCPServer:
 
 def main() -> None:
     """Run the MCP server over stdio until the client disconnects."""
+    logger.info("Starting codebase cartography MCP server...")
     build_server().run(transport="stdio")
 
 

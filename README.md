@@ -12,7 +12,7 @@ MCP configuration `mcp.json`:
     "mcp-codebase-cartography": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["mcp-codebase-cartography"]
+      "args": ["mcp-codebase-cartography", "serve"]
     }
   }
 }

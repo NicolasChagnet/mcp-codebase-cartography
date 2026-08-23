@@ -18,7 +18,7 @@ test = [
 ]
 
 [project.scripts]
-mcp-codebase-cartography = "mcp_codebase_cartography.server:main"
+serve = "mcp_codebase_cartography.server:main"
 
 [build-system]
 requires = ["maturin>=1.7,<2.0"]
