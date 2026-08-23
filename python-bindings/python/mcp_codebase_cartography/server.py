@@ -26,8 +26,8 @@ def build_server(root: str | None = None) -> MCPServer:
     server = MCPServer("mcp-codebase-cartography")
 
     @server.tool()
-    async def get_codebase_map(max_depth: int = 2) -> str:
-        """Return the root folder directory tree, filtering out ignored files."""
+    async def get_codebase_map(max_depth: int = 2) -> dict:
+        """Return the root folder directory tree as a structured object, filtering out ignored files."""
         return engine.get_codebase_map(max_depth)
 
     @server.tool()

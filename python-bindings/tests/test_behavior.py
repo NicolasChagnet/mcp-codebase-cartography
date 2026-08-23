@@ -86,15 +86,21 @@ def _list_blocks(result):
 
 @pytest.mark.anyio
 async def test_codebase_map_excludes_ignored(server):
-    text = (
+    payload = json.loads(
         (await server.call_tool("get_codebase_map", {"max_depth": 2})).content[0].text
     )
-    assert "src/" in text
-    assert "app.py" in text
-    assert "util.rs" in text
-    assert "build" not in text
-    assert "notes.log" not in text
-    assert "__pycache__" not in text
+    assert payload["name"] == "."
+    assert payload["kind"] == "dir"
+    src = next(n for n in payload["children"] if n["name"] == "src")
+    assert src["kind"] == "dir"
+    assert src["path"] == "src"
+    assert {n["name"] for n in src["children"]} == {"app.py", "util.rs"}
+    assert all(n["kind"] == "file" for n in src["children"])
+    # Ignored paths never surface.
+    names = {n["name"] for n in payload["children"]}
+    assert "build" not in names
+    assert "notes.log" not in names
+    assert "__pycache__" not in names
 
 
 @pytest.mark.anyio

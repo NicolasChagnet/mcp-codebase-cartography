@@ -41,9 +41,10 @@ impl Engine {
     }
 
     /// Return the root folder directory tree, filtering out ignored files.
-    fn get_codebase_map(&self, max_depth: usize) -> PyResult<String> {
-        cartography_core::tree::get_codebase_map(&self.engine, max_depth)
-            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    fn get_codebase_map(&self, py: Python<'_>, max_depth: usize) -> PyResult<PyObject> {
+        let root = cartography_core::tree::get_codebase_map(&self.engine, max_depth)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        map_node_to_py(py, &root)
     }
 
     /// Return a compact view of a file: imports plus declaration signatures.
@@ -136,6 +137,28 @@ impl Engine {
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         changes_to_py(py, &changes)
     }
+}
+
+/// Convert a codebase map node to a `{name, path, kind, children,
+/// collapsed_entries}` dict, recursing into children.
+fn map_node_to_py(py: Python<'_>, node: &cartography_core::tree::MapNode) -> PyResult<PyObject> {
+    let d = PyDict::new(py);
+    d.set_item("name", &node.name)?;
+    d.set_item("path", &node.path)?;
+    d.set_item(
+        "kind",
+        match node.kind {
+            cartography_core::tree::MapNodeKind::Dir => "dir",
+            cartography_core::tree::MapNodeKind::File => "file",
+        },
+    )?;
+    let children = PyList::empty(py);
+    for child in &node.children {
+        children.append(map_node_to_py(py, child)?)?;
+    }
+    d.set_item("children", children)?;
+    d.set_item("collapsed_entries", node.collapsed_entries)?;
+    Ok(d.into_any().unbind())
 }
 
 /// Convert search matches to a list of `{file, line, text}` dicts.

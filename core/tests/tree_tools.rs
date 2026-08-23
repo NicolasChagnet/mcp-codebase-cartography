@@ -8,7 +8,7 @@ use core::compress::{CompressError, get_compressed_file};
 use core::index::Engine;
 use core::read::{ReadRangeError, read_file_range};
 use core::search::{SearchError, search_codebase};
-use core::tree::get_codebase_map;
+use core::tree::{MapNodeKind, get_codebase_map};
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -57,15 +57,31 @@ fn codebase_map_filters_by_depth() {
     let deep = get_codebase_map(&e, 2).unwrap();
 
     // max_depth=1 shows top-level entries and collapses src/.
-    assert!(shallow.contains("a.rs"));
-    assert!(shallow.contains("src/"));
-    assert!(shallow.contains("... ("));
-    assert!(!shallow.contains("b.rs"));
+    let src = shallow
+        .children
+        .iter()
+        .find(|n| n.name == "src")
+        .expect("src/ present");
+    assert_eq!(src.kind, MapNodeKind::Dir);
+    assert_eq!(src.collapsed_entries, Some(2));
+    assert!(src.children.is_empty());
+    assert!(shallow.children.iter().any(|n| n.name == "a.rs"));
+    assert!(!shallow.children.iter().any(|n| n.name == "b.rs"));
 
     // max_depth=2 expands src/ but collapses src/deep/.
-    assert!(deep.contains("b.rs"));
-    assert!(deep.contains("deep/"));
-    assert!(!deep.contains("c.rs"));
+    let src = deep
+        .children
+        .iter()
+        .find(|n| n.name == "src")
+        .expect("src/ present");
+    assert!(src.children.iter().any(|n| n.name == "b.rs"));
+    let deep_dir = src
+        .children
+        .iter()
+        .find(|n| n.name == "deep")
+        .expect("deep/ present");
+    assert_eq!(deep_dir.collapsed_entries, Some(1));
+    assert!(!deep.children.iter().any(|n| n.name == "c.rs"));
 }
 
 #[test]
@@ -77,10 +93,8 @@ fn codebase_map_is_deterministic() {
 
     let e = engine(&tmp);
     let out = get_codebase_map(&e, 2).unwrap();
-    let a = out.find("alpha.rs").unwrap();
-    let m = out.find("mid.rs").unwrap();
-    let z = out.find("zeta.rs").unwrap();
-    assert!(a < m && m < z);
+    let names: Vec<&str> = out.children.iter().map(|n| n.name.as_str()).collect();
+    assert_eq!(names, ["alpha.rs", "mid.rs", "zeta.rs"]);
 }
 
 #[test]

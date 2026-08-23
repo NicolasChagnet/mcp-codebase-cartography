@@ -58,9 +58,11 @@ async def test_tool_defaults_and_optional_args(server):
 @pytest.mark.anyio
 async def test_get_codebase_map_returns_tree(server):
     result = await server.call_tool("get_codebase_map", {"max_depth": 1})
-    text = result.content[0].text
-    assert "core" in text
-    assert "python-bindings" in text
+    payload = json.loads(result.content[0].text)
+    assert payload["kind"] == "dir"
+    names = {n["name"] for n in payload["children"]}
+    assert "core" in names
+    assert "python-bindings" in names
 
 
 @pytest.mark.anyio
