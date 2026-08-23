@@ -14,6 +14,11 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: jj-cli@0.44.0
+      - name: Verify jj
+        run: jj --version
       - run: make lint-rust
       - run: make test-rust
 
