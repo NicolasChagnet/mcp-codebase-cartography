@@ -1,4 +1,4 @@
-//! Symbol lookup tools: file outlines and symbol definitions.
+//! Symbol lookup tools: symbol definitions.
 
 use std::path::Path;
 
@@ -13,8 +13,6 @@ pub enum SymbolError {
     Path(PathError),
     Read(ReadError),
     Io(std::io::Error),
-    /// The file's language is not supported.
-    Unsupported,
     /// No symbol with the requested name was found.
     NotFound,
     /// The name matched symbols in multiple files; `files` lists them.
@@ -29,7 +27,6 @@ impl std::fmt::Display for SymbolError {
             SymbolError::Path(e) => write!(f, "{e}"),
             SymbolError::Read(e) => write!(f, "{e}"),
             SymbolError::Io(e) => write!(f, "{e}"),
-            SymbolError::Unsupported => write!(f, "unsupported file type"),
             SymbolError::NotFound => write!(f, "symbol not found"),
             SymbolError::Ambiguous { files } => {
                 write!(f, "symbol found in multiple files: {}", files.join(", "))
@@ -56,15 +53,6 @@ impl From<std::io::Error> for SymbolError {
     fn from(e: std::io::Error) -> Self {
         SymbolError::Io(e)
     }
-}
-
-/// Return the outline (all symbols with kinds and line ranges) of a file.
-pub fn get_file_outline(engine: &mut Engine, file_path: &Path) -> Result<Vec<Symbol>, SymbolError> {
-    let rel = engine.resolve(file_path)?;
-    let lang = Language::from_path(&rel).ok_or(SymbolError::Unsupported)?;
-    let bytes = engine.read_file(file_path)?;
-    let source = String::from_utf8_lossy(&bytes);
-    Ok(ast::parse(lang, &source))
 }
 
 /// Return the exact source span of a symbol by name. When `file_path` is

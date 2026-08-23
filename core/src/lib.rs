@@ -19,7 +19,7 @@ pub mod symbols;
 pub mod tree;
 
 pub use ast::Symbol;
-pub use compress::{CompressError, get_compressed_file};
+pub use compress::{CompressError, FileStructure, SymbolRecord, get_file_structure};
 pub use diff::{ChangeStatus, DiffError, SymbolChange, get_ast_diff};
 pub use index::{Engine, FileRecord, ReadError};
 pub use languages::Language;
@@ -29,5 +29,5 @@ pub use refs::{
     get_upstream_refs,
 };
 pub use search::{SearchError, SearchMatch, search_codebase};
-pub use symbols::{SymbolError, get_file_outline, get_symbol_definition};
+pub use symbols::{SymbolError, get_symbol_definition};
 pub use tree::{TreeError, get_codebase_map};

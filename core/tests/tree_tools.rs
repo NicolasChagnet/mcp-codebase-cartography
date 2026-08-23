@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use core::compress::{CompressError, get_compressed_file};
+use core::compress::{CompressError, get_file_structure};
 use core::index::Engine;
 use core::search::{SearchError, search_codebase};
 use core::tree::{MapNodeKind, get_codebase_map};
@@ -97,53 +97,105 @@ fn codebase_map_is_deterministic() {
 }
 
 #[test]
-fn compressed_file_strips_bodies() {
+fn file_structure_rust_imports_and_symbols() {
     let tmp = TempDir::new();
     tmp.write(
         "lib.rs",
-        "use std::fmt;\n\npub fn greet(name: &str) -> String {\n    format!(\"hi {name}\")\n}\n\npub struct Point {\n    pub x: i32,\n}\n",
+        "use std::fmt;\nuse std::fmt;\n\npub fn greet(name: &str) -> String {\n    format!(\"hi {name}\")\n}\n\npub struct Point {\n    pub x: i32,\n}\n",
     );
 
     let mut e = engine(&tmp);
-    let out = get_compressed_file(&mut e, &tmp.path().join("lib.rs")).unwrap();
+    let out = get_file_structure(&mut e, &tmp.path().join("lib.rs")).unwrap();
 
-    assert!(out.contains("use std::fmt;"));
-    assert!(out.contains("pub fn greet(name: &str) -> String {"));
-    assert!(out.contains("[Body hidden: 1 lines]"));
-    assert!(out.contains("pub struct Point {"));
-    // Body logic is stripped.
-    assert!(!out.contains("format!"));
+    assert_eq!(out.path, "lib.rs");
+    // Duplicate import lines are collapsed to one.
+    assert_eq!(out.imports, vec!["use std::fmt;".to_string()]);
+    let names: Vec<(&str, &str)> = out
+        .symbols
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
+    assert_eq!(names, vec![("greet", "function"), ("Point", "struct")]);
+    assert_eq!(
+        out.symbols[0].signature,
+        "pub fn greet(name: &str) -> String {"
+    );
+    assert_eq!(out.symbols[1].signature, "pub struct Point {");
+    assert_eq!((out.symbols[0].line_start, out.symbols[0].line_end), (4, 6));
+    assert_eq!(
+        (out.symbols[1].line_start, out.symbols[1].line_end),
+        (8, 10)
+    );
 }
 
 #[test]
-fn compressed_file_keeps_closing_delimiters() {
+fn file_structure_python_imports_and_symbols() {
     let tmp = TempDir::new();
     tmp.write(
-        "lib.rs",
-        "pub fn empty() {\n}\n\npub fn one_line() { return 1; }\n\npub fn multi() {\n    let x = 1;\n    x + 1\n}\n\npub fn trailing() {\n    let x = 1; }\n",
+        "app.py",
+        "import os\nimport os\nfrom pathlib import Path\n\n\ndef top_level():\n    pass\n\n\nclass Greeter:\n    def hello(self):\n        return \"hi\"\n",
     );
 
     let mut e = engine(&tmp);
-    let out = get_compressed_file(&mut e, &tmp.path().join("lib.rs")).unwrap();
+    let out = get_file_structure(&mut e, &tmp.path().join("app.py")).unwrap();
 
-    // Multi-line bodies keep their closing brace after the hidden marker, and
-    // the hidden count reflects the interior (not the declaration span).
-    assert!(out.contains("pub fn empty() {   // [Body hidden: 0 lines]\n  }"));
-    assert!(out.contains("pub fn multi() {   // [Body hidden: 2 lines]\n  }"));
-    // A closing brace sharing its line with the last statement is still kept.
-    assert!(out.contains("pub fn trailing() {   // [Body hidden: 1 lines]\n  }"));
-    // One-line bodies already carry both delimiters on the signature line.
-    assert!(out.contains("pub fn one_line() { return 1; }   // [Body hidden: 0 lines]"));
+    assert_eq!(out.path, "app.py");
+    assert_eq!(
+        out.imports,
+        vec![
+            "import os".to_string(),
+            "from pathlib import Path".to_string()
+        ]
+    );
+    let names: Vec<(&str, &str)> = out
+        .symbols
+        .iter()
+        .map(|s| (s.name.as_str(), s.kind.as_str()))
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            ("top_level", "function"),
+            ("Greeter", "class"),
+            ("hello", "function"),
+        ]
+    );
+    assert_eq!(out.symbols[0].signature, "def top_level():");
+    assert_eq!(out.symbols[1].signature, "class Greeter:");
 }
 
 #[test]
-fn compressed_file_rejects_unsupported() {
+fn file_structure_reports_exact_line_ranges() {
+    let tmp = TempDir::new();
+    tmp.write(
+        "span.rs",
+        "pub fn a() {}\n\npub fn b() {\n    let x = 1;\n}\n",
+    );
+
+    let mut e = engine(&tmp);
+    let out = get_file_structure(&mut e, &tmp.path().join("span.rs")).unwrap();
+    assert_eq!(out.symbols[0].name, "a");
+    assert_eq!((out.symbols[0].line_start, out.symbols[0].line_end), (1, 1));
+    assert_eq!(out.symbols[1].name, "b");
+    assert_eq!((out.symbols[1].line_start, out.symbols[1].line_end), (3, 5));
+}
+
+#[test]
+fn file_structure_rejects_unsupported() {
     let tmp = TempDir::new();
     tmp.write("notes.txt", "just text");
 
     let mut e = engine(&tmp);
-    let err = get_compressed_file(&mut e, &tmp.path().join("notes.txt")).unwrap_err();
+    let err = get_file_structure(&mut e, &tmp.path().join("notes.txt")).unwrap_err();
     assert!(matches!(err, CompressError::Unsupported));
+}
+
+#[test]
+fn file_structure_rejects_missing_path() {
+    let tmp = TempDir::new();
+    let mut e = engine(&tmp);
+    let err = get_file_structure(&mut e, &tmp.path().join("nope.rs")).unwrap_err();
+    assert!(matches!(err, CompressError::Path(_)));
 }
 
 #[test]
