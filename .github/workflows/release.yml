@@ -54,3 +54,38 @@ jobs:
           name: dist-${{ matrix.os }}
           path: python-bindings/dist
           if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        working-directory: dist
+        run: uv publish
+
+  github-release:
+    name: Create GitHub release
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
