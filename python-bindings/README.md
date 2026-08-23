@@ -33,9 +33,8 @@ The extension mirrors the MCP tool contract. Argument defaults match the
 server registration:
 
 - `get_codebase_map(max_depth: int = 2) -> dict`
-- `get_compressed_file(file_path: str) -> str`
+- `get_file_structure(file_path: str) -> dict`
 - `search_codebase(pattern: str, extension: str | None = None, max_results: int = 10) -> list`
-- `get_file_outline(file_path: str) -> list`
 - `get_symbol_definition(symbol_name: str, file_path: str | None = None) -> str`
 - `get_upstream_refs(symbol_name: str) -> list` — reference sites where the queried symbol is referenced/called/used (its direct dependents/callers)
 - `get_downstream_refs(symbol_key: str, max_depth: int = 2) -> dict` — transitive callers/impact up to `max_depth` hops
@@ -44,7 +43,7 @@ server registration:
 Result shapes are plain Python lists and dicts:
 
 - `search_codebase` → `[{file, line, text}]`
-- `get_file_outline` → `[{name, kind, line_start, line_end}]`
+- `get_file_structure` → `{path, imports: [string], symbols: [{name, kind, line_start, line_end, signature}]}`
 - `get_upstream_refs` → `[{file, line, context}]`
 - `get_downstream_refs` → `{callers: [{symbol, kind, file, line_start, line_end, depth}], paths: [{path}]}`
 - `get_ast_diff` → `[{status, name, kind, file, line_start, line_end, summary}]`

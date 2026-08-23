@@ -16,7 +16,7 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
 
 
 def build_server(root: str | None = None) -> MCPServer:
-    """Create the MCP server with all eight documented tools.
+    """Create the MCP server with all seven documented tools.
 
     A single native ``Engine`` is instantiated over the repository root (the
     process working directory by default) and shared by every tool handler.
@@ -32,9 +32,9 @@ def build_server(root: str | None = None) -> MCPServer:
         return engine.get_codebase_map(max_depth)
 
     @server.tool()
-    async def get_compressed_file(file_path: str) -> str:
-        """Return a file's imports, type declarations, docstrings, and function signatures."""
-        return engine.get_compressed_file(file_path)
+    async def get_file_structure(file_path: str) -> dict:
+        """Return a file's structured view: its path, unique imports, and each declaration's metadata (name, kind, line range) and signature."""
+        return engine.get_file_structure(file_path)
 
     @server.tool()
     async def search_codebase(
@@ -42,11 +42,6 @@ def build_server(root: str | None = None) -> MCPServer:
     ) -> list:
         """Run regex search over indexed files, returning matching files and snippets."""
         return engine.search_codebase(pattern, extension, max_results)
-
-    @server.tool()
-    async def get_file_outline(file_path: str) -> list:
-        """Return classes, functions, and interfaces with line ranges and AST node kinds."""
-        return engine.get_file_outline(file_path)
 
     @server.tool()
     async def get_symbol_definition(

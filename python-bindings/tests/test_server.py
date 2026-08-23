@@ -16,9 +16,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 
 EXPECTED_TOOLS = {
     "get_codebase_map",
-    "get_compressed_file",
+    "get_file_structure",
     "search_codebase",
-    "get_file_outline",
     "get_symbol_definition",
     "get_upstream_refs",
     "get_downstream_refs",
@@ -32,7 +31,7 @@ def server():
 
 
 @pytest.mark.anyio
-async def test_all_eight_tools_registered(server):
+async def test_all_seven_tools_registered(server):
     tools = await server.list_tools()
     names = {t.name for t in tools}
     assert names == EXPECTED_TOOLS
@@ -84,14 +83,18 @@ async def test_get_codebase_map_returns_tree(server):
 
 
 @pytest.mark.anyio
-async def test_get_file_outline_returns_json_list(server):
+async def test_get_file_structure_returns_json_dict(server):
     result = await server.call_tool(
-        "get_file_outline", {"file_path": "core/src/index.rs"}
+        "get_file_structure", {"file_path": "core/src/index.rs"}
     )
-    # The SDK emits one content block per list element.
-    payload = [json.loads(block.text) for block in result.content]
-    assert payload, "expected at least one symbol in core/src/index.rs"
-    assert {"name", "kind", "line_start", "line_end"} <= set(payload[0])
+    payload = json.loads(result.content[0].text)
+    assert set(payload) == {"path", "imports", "symbols"}
+    assert payload["path"] == "core/src/index.rs"
+    assert isinstance(payload["imports"], list)
+    assert payload["symbols"], "expected at least one symbol in core/src/index.rs"
+    assert {"name", "kind", "line_start", "line_end", "signature"} <= set(
+        payload["symbols"][0]
+    )
 
 
 @pytest.mark.anyio
@@ -99,6 +102,4 @@ async def test_native_failure_surfaces_as_error(server):
     # Native failures are wrapped in a ToolError (an MCPError), which the SDK
     # surfaces to the client as a JSON-RPC error rather than a successful result.
     with pytest.raises(ToolError, match="path does not exist"):
-        await server.call_tool(
-            "get_compressed_file", {"file_path": "does/not/exist.rs"}
-        )
+        await server.call_tool("get_file_structure", {"file_path": "does/not/exist.rs"})

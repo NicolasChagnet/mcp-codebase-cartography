@@ -107,35 +107,36 @@ async def test_codebase_map_excludes_ignored(server):
 
 
 @pytest.mark.anyio
-async def test_compressed_file(server):
-    text = (
-        (await server.call_tool("get_compressed_file", {"file_path": "src/app.py"}))
+async def test_file_structure_python(server):
+    payload = json.loads(
+        (await server.call_tool("get_file_structure", {"file_path": "src/app.py"}))
         .content[0]
         .text
     )
-    assert text.startswith("src/app.py")
-    assert "imports:" in text
-    assert "from util import helper" in text
-    assert "symbols:" in text
-    assert "def main" in text
-    assert "[Body hidden:" in text
+    assert payload["path"] == "src/app.py"
+    assert "from util import helper" in payload["imports"]
+    by_name = {s["name"]: s for s in payload["symbols"]}
+    assert by_name["Greeter"]["kind"] == "class"
+    assert by_name["greet"]["kind"] == "function"
+    assert by_name["main"]["kind"] == "function"
+    assert by_name["main"]["line_start"] <= by_name["main"]["line_end"]
+    assert by_name["main"]["signature"] == "def main():"
 
 
 @pytest.mark.anyio
-async def test_compressed_file_keeps_closing_delimiters(server):
-    text = (
-        (await server.call_tool("get_compressed_file", {"file_path": "src/util.rs"}))
+async def test_file_structure_rust(server):
+    payload = json.loads(
+        (await server.call_tool("get_file_structure", {"file_path": "src/util.rs"}))
         .content[0]
         .text
     )
-    # The closing brace of each hidden body survives the marker, and the hidden
-    # count reflects the omitted interior.
-    assert "pub fn helper() -> i32 {   // [Body hidden: 1 lines]" in text
-    assert "}" in text
-    # A closing brace sharing its line with the last statement is still kept.
-    assert "pub fn trailing() {   // [Body hidden: 1 lines]" in text
-    # Body logic is stripped.
-    assert "42" not in text
+    assert payload["path"] == "src/util.rs"
+    assert "use std::fmt;" in payload["imports"]
+    by_name = {s["name"]: s for s in payload["symbols"]}
+    assert by_name["Point"]["kind"] == "struct"
+    assert by_name["new"]["kind"] == "function"
+    assert by_name["helper"]["kind"] == "function"
+    assert by_name["helper"]["signature"] == "pub fn helper() -> i32 {"
 
 
 @pytest.mark.anyio
@@ -175,29 +176,6 @@ async def test_search_codebase_invalid_regex(server):
 async def test_search_codebase_invalid_extension(server):
     with pytest.raises(ToolError, match="invalid extension filter"):
         await server.call_tool("search_codebase", {"pattern": "x", "extension": "a/b"})
-
-
-@pytest.mark.anyio
-async def test_file_outline_python(server):
-    symbols = _list_blocks(
-        await server.call_tool("get_file_outline", {"file_path": "src/app.py"})
-    )
-    by_name = {s["name"]: s for s in symbols}
-    assert by_name["Greeter"]["kind"] == "class"
-    assert by_name["greet"]["kind"] == "function"
-    assert by_name["main"]["kind"] == "function"
-    assert by_name["main"]["line_start"] <= by_name["main"]["line_end"]
-
-
-@pytest.mark.anyio
-async def test_file_outline_rust(server):
-    symbols = _list_blocks(
-        await server.call_tool("get_file_outline", {"file_path": "src/util.rs"})
-    )
-    by_name = {s["name"]: s for s in symbols}
-    assert by_name["Point"]["kind"] == "struct"
-    assert by_name["new"]["kind"] == "function"
-    assert by_name["helper"]["kind"] == "function"
 
 
 @pytest.mark.anyio

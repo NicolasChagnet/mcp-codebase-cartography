@@ -47,10 +47,12 @@ impl Engine {
         map_node_to_py(py, &root)
     }
 
-    /// Return a compact view of a file: imports plus declaration signatures.
-    fn get_compressed_file(&mut self, file_path: &str) -> PyResult<String> {
-        cartography_core::compress::get_compressed_file(&mut self.engine, Path::new(file_path))
-            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    /// Return the structured view of a file: path, imports, and symbol metadata.
+    fn get_file_structure(&mut self, py: Python<'_>, file_path: &str) -> PyResult<PyObject> {
+        let structure =
+            cartography_core::compress::get_file_structure(&mut self.engine, Path::new(file_path))
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        file_structure_to_py(py, &structure)
     }
 
     /// Regex search over indexed files, returning up to `max_results` matches.
@@ -70,14 +72,6 @@ impl Engine {
         )
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         search_matches_to_py(py, &matches)
-    }
-
-    /// Return the outline (name, kind, line range) of a file's symbols.
-    fn get_file_outline(&mut self, py: Python<'_>, file_path: &str) -> PyResult<PyObject> {
-        let symbols =
-            cartography_core::symbols::get_file_outline(&mut self.engine, Path::new(file_path))
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-        symbols_to_py(py, &symbols)
     }
 
     /// Return the exact source span of a symbol by name.
@@ -161,17 +155,30 @@ fn search_matches_to_py(
     Ok(out.into_any().unbind())
 }
 
-/// Convert symbols to a list of `{name, kind, line_start, line_end}` dicts.
-fn symbols_to_py(py: Python<'_>, symbols: &[cartography_core::ast::Symbol]) -> PyResult<PyObject> {
-    let out = PyList::empty(py);
-    for s in symbols {
+/// Convert a file structure to a `{path, imports, symbols}` dict, where each
+/// symbol is a `{name, kind, line_start, line_end, signature}` dict.
+fn file_structure_to_py(
+    py: Python<'_>,
+    structure: &cartography_core::compress::FileStructure,
+) -> PyResult<PyObject> {
+    let imports = PyList::empty(py);
+    for i in &structure.imports {
+        imports.append(i)?;
+    }
+    let symbols = PyList::empty(py);
+    for s in &structure.symbols {
         let d = PyDict::new(py);
         d.set_item("name", &s.name)?;
         d.set_item("kind", &s.kind)?;
         d.set_item("line_start", s.line_start)?;
         d.set_item("line_end", s.line_end)?;
-        out.append(d)?;
+        d.set_item("signature", &s.signature)?;
+        symbols.append(d)?;
     }
+    let out = PyDict::new(py);
+    out.set_item("path", &structure.path)?;
+    out.set_item("imports", imports)?;
+    out.set_item("symbols", symbols)?;
     Ok(out.into_any().unbind())
 }
 

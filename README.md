@@ -78,13 +78,11 @@ The various exposed tools by this server are:
 
 - `get_codebase_map(max_depth: int = 2)`: Returns the root folder directory tree as a structured object, filtering out ignored files (.git, node_modules, build dirs). Each node has a `name`, workspace-relative `path`, `kind` (`dir` or `file`), and nested `children`; directories truncated by `max_depth` carry a `collapsed_entries` count of omitted entries. Gives the agent a macro overview of the structural layout.
 
-- `get_compressed_file(file_path: string)`: Preferred over standard file reading. Returns a file's imports, type declarations, docstrings, and function signatures with body logic stripped and replaced by line counts (e.g., // [Body hidden: 45 lines]). Opening and closing delimiters are preserved so the output stays syntactically unambiguous.
+- `get_file_structure(file_path: string)`: Preferred over standard file reading. Returns a file's structured view: its workspace-relative `path`, unique `imports`, and each declaration's metadata and `signature` (the declaration's first line). Returns `{path, imports: [string], symbols: [{name, kind, line_start, line_end, signature}]}`.
 
 - `search_codebase(pattern: string, extension: string | undefined, max_results: int = 10)`: Runs regex search over indexed files using an ultra-fast in-memory/ripgrep backend. Returns matching files and snippets truncated to 1 line of context.
 
-- `get_file_outline(file_path: string)` Parses AST to return classes, functions, and interfaces along with their line ranges and AST node kinds. Returns a JSON list of symbols containing name, kind, line_start, and line_end.
-
-- `get_symbol_definition(symbol_name: string, file_path: string | undefined)`: Fetches the implementation code for a single symbol by name without returning the rest of the file. Returns the extracted source string of the AST node.
+- `get_symbol_definition(symbol_name: string, file_path: string | undefined)`: Fetches the implementation code for a single symbol by name without returning the rest of the file. Returns the extracted source string of the AST node. Use this to drill into a symbol's body after locating it via `get_file_structure`.
 
 - `get_downstream_refs(symbol_key: string, max_depth: int = 2)`: Traverses the reference graph to list the transitive callers and impact paths of a symbol — the symbols/files that depend on, call, or reference it — up to `max_depth` hops. Helps evaluate impact before modifying code. Returns `{callers: [{symbol, kind, file, line_start, line_end, depth}], paths: [{path}]}` with workspace-relative paths. `symbol_key` is a bare name or `file:name` to disambiguate; resolution is conservative and name-based (lexical) with ambiguity errors where applicable.
 
