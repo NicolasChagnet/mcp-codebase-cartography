@@ -35,6 +35,36 @@ maturin build --release
 pip install target/wheels/mcp_codebase_cartography-*.whl
 ```
 
+### Installing from PyPI
+
+The package is published to PyPI. Run it without installing via `uvx`, or
+install it with pip:
+
+```sh
+uvx mcp-codebase-cartography serve
+pip install mcp-codebase-cartography
+```
+
+### Releasing
+
+Releases are cut from semver tags. The version lives in
+`python-bindings/Cargo.toml` (`package.version`) and is read dynamically by
+`pyproject.toml`.
+
+1. Bump `package.version` in `python-bindings/Cargo.toml`.
+2. Run the quality gates (`cargo clippy`, `cargo test`, `uvx ruff check
+   python-bindings`, `uv run pyrefly check python-bindings`).
+3. Commit and push a matching tag: `git tag v0.1.0 && git push origin v0.1.0`
+   (or `jj tag set v0.1.0`).
+
+Pushing a `vMAJOR.MINOR.PATCH` tag triggers `.github/workflows/release.yml`,
+which builds the sdist and wheels, verifies the tag matches the package
+version, publishes to PyPI, and creates a GitHub release with the artifacts.
+
+Prerequisite: PyPI [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
+must be configured for the `pypi` GitHub environment so the workflow can
+publish without a token.
+
 ### Repository root
 
 The server indexes the repository root, discovered from the process working
