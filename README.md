@@ -89,3 +89,9 @@ The various exposed tools by this server are:
 - `get_upstream_refs(symbol_name: string)`: Finds every reference site for this symbol — the files and lines where it is called, used, or referenced across the codebase. Upstream results are direct reference sites with workspace-relative paths and the surrounding source line as context. Returns `[{file, line, context}]`. Resolution is conservative and name-based (lexical) with ambiguity errors where applicable.
 
 - `get_ast_diff(base_ref: string = "HEAD")`: Summarizes code changes structurally across commits or uncommitted working trees. Filters out formatting and whitespace changes. Returns a text summary listing modified, added, or deleted functions/classes.
+
+  JJ is an optional diff backend, not an installation requirement. Git
+  repositories (a `.git` directory) use Git without needing `jj`. Only
+  JJ-backed repositories (a `.jj` directory) require the `jj` executable, and
+  only when calling `get_ast_diff`; if it is missing, the tool returns a clear
+  error. CI installs `jj` solely for integration coverage.
