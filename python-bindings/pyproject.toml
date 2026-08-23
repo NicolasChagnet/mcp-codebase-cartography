@@ -15,10 +15,10 @@ dependencies = [
 test = [
     "pytest>=8.0",
     "anyio>=4.0",
+    "pyrefly>=1.2.0",
 ]
 
 [project.scripts]
-mcp-codebase-cartography = "mcp_codebase_cartography.server:main"
 serve = "mcp_codebase_cartography.server:main"
 
 [build-system]
