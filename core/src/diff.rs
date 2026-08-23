@@ -128,11 +128,15 @@ pub fn get_ast_diff(engine: &mut Engine, base_ref: &str) -> Result<Vec<SymbolCha
 }
 
 /// Detect the VCS backing `root` by its marker directory.
+///
+/// Prefer JJ when both `.jj` and `.git` exist: a colocated repo (the default
+/// for `jj git init`) is a Git repo underneath, but `@-` and friends are JJ
+/// revsets that Git cannot resolve.
 fn detect_vcs(root: &Path) -> Option<Vcs> {
-    if root.join(".git").exists() {
-        Some(Vcs::Git)
-    } else if root.join(".jj").exists() {
+    if root.join(".jj").exists() {
         Some(Vcs::Jj)
+    } else if root.join(".git").exists() {
+        Some(Vcs::Git)
     } else {
         None
     }
