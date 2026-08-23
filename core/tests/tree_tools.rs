@@ -110,10 +110,31 @@ fn compressed_file_strips_bodies() {
 
     assert!(out.contains("use std::fmt;"));
     assert!(out.contains("pub fn greet(name: &str) -> String {"));
-    assert!(out.contains("[Body hidden: 2 lines]"));
+    assert!(out.contains("[Body hidden: 1 lines]"));
     assert!(out.contains("pub struct Point {"));
     // Body logic is stripped.
     assert!(!out.contains("format!"));
+}
+
+#[test]
+fn compressed_file_keeps_closing_delimiters() {
+    let tmp = TempDir::new();
+    tmp.write(
+        "lib.rs",
+        "pub fn empty() {\n}\n\npub fn one_line() { return 1; }\n\npub fn multi() {\n    let x = 1;\n    x + 1\n}\n\npub fn trailing() {\n    let x = 1; }\n",
+    );
+
+    let mut e = engine(&tmp);
+    let out = get_compressed_file(&mut e, &tmp.path().join("lib.rs")).unwrap();
+
+    // Multi-line bodies keep their closing brace after the hidden marker, and
+    // the hidden count reflects the interior (not the declaration span).
+    assert!(out.contains("pub fn empty() {   // [Body hidden: 0 lines]\n  }"));
+    assert!(out.contains("pub fn multi() {   // [Body hidden: 2 lines]\n  }"));
+    // A closing brace sharing its line with the last statement is still kept.
+    assert!(out.contains("pub fn trailing() {   // [Body hidden: 1 lines]\n  }"));
+    // One-line bodies already carry both delimiters on the signature line.
+    assert!(out.contains("pub fn one_line() { return 1; }   // [Body hidden: 0 lines]"));
 }
 
 #[test]

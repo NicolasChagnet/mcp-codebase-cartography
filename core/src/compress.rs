@@ -94,15 +94,55 @@ pub fn get_compressed_file(engine: &mut Engine, file_path: &Path) -> Result<Stri
 
     out.push_str("symbols:\n");
     for sym in &symbols {
-        let sig = signature(&source, sym);
-        let body_lines = sym.line_end.saturating_sub(sym.line_start);
-        let _ = writeln!(out, "  {sig}   // [Body hidden: {body_lines} lines]");
+        let span = &source[sym.start_byte..sym.end_byte];
+        let mut lines = span.lines();
+        // The signature is the declaration's first line, which carries the
+        // opening delimiter for brace languages.
+        let sig = lines.next().unwrap_or("").trim().to_string();
+        let rest: Vec<&str> = lines.collect();
+        if rest.is_empty() {
+            // One-line declaration: both delimiters already sit on the
+            // signature line, so there is no interior to hide.
+            let _ = writeln!(out, "  {sig}   // [Body hidden: 0 lines]");
+        } else if let Some(closing) = closing_delimiter(span) {
+            // Brace language: retain the closing delimiter and hide the
+            // interior between the signature and it. The delimiter may share
+            // its line with the last statement, so the hidden count comes from
+            // the interior text rather than the declaration span.
+            let interior = &span[sig_end(span)..closing.pos];
+            let hidden = interior.lines().count();
+            let _ = writeln!(out, "  {sig}   // [Body hidden: {hidden} lines]");
+            let _ = writeln!(out, "  {}", closing.text);
+        } else {
+            // No closing delimiter (e.g. Python): hide the whole interior.
+            let _ = writeln!(out, "  {sig}   // [Body hidden: {} lines]", rest.len());
+        }
     }
     Ok(out)
 }
 
-/// The declaration's signature: the first line of its source, trimmed.
-fn signature(source: &str, sym: &ast::Symbol) -> String {
-    let span = &source[sym.start_byte..sym.end_byte];
-    span.lines().next().unwrap_or("").trim().to_string()
+/// The byte offset just past the declaration's first line.
+fn sig_end(span: &str) -> usize {
+    span.find('\n').map(|i| i + 1).unwrap_or(span.len())
+}
+
+/// A block-closing delimiter found at the end of a brace-language span.
+struct Closing<'a> {
+    /// Byte offset of the delimiter within the span.
+    pos: usize,
+    /// The delimiter text (e.g. `}`).
+    text: &'a str,
+}
+
+/// The trailing block-closing delimiter (`}`) of a brace-language span, or
+/// `None` for languages without block braces (e.g. Python), whose spans end in
+/// a statement rather than a delimiter.
+fn closing_delimiter(span: &str) -> Option<Closing<'_>> {
+    let trimmed = span.trim_end();
+    let last = trimmed.chars().last()?;
+    if last != '}' {
+        return None;
+    }
+    let pos = trimmed.len() - last.len_utf8();
+    Some(Closing { pos, text: &trimmed[pos..] })
 }

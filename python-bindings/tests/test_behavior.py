@@ -54,6 +54,9 @@ pub fn helper() -> i32 {
 pub fn shared() -> i32 {
     1
 }
+
+pub fn trailing() {
+    let x = 1; }
 """
 
 
@@ -162,6 +165,23 @@ async def test_read_file_range_invalid(server):
             "read_file_range",
             {"file_path": "src/app.py", "start_line": 0, "end_line": 3},
         )
+
+
+@pytest.mark.anyio
+async def test_compressed_file_keeps_closing_delimiters(server):
+    text = (
+        (await server.call_tool("get_compressed_file", {"file_path": "src/util.rs"}))
+        .content[0]
+        .text
+    )
+    # The closing brace of each hidden body survives the marker, and the hidden
+    # count reflects the omitted interior.
+    assert "pub fn helper() -> i32 {   // [Body hidden: 1 lines]" in text
+    assert "}" in text
+    # A closing brace sharing its line with the last statement is still kept.
+    assert "pub fn trailing() {   // [Body hidden: 1 lines]" in text
+    # Body logic is stripped.
+    assert "42" not in text
 
 
 @pytest.mark.anyio
