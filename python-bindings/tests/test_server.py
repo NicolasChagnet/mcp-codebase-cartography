@@ -55,6 +55,23 @@ async def test_tool_defaults_and_optional_args(server):
 
 
 @pytest.mark.anyio
+async def test_reference_tool_descriptions_explain_direction(server):
+    tools = {t.name: t.description for t in await server.list_tools()}
+
+    upstream = tools["get_upstream_refs"]
+    assert "referenced, called, or used" in upstream
+    assert "reference sites" in upstream
+    assert "workspace-relative" in upstream
+    assert "ambiguity" in upstream
+
+    downstream = tools["get_downstream_refs"]
+    assert "depend on, call, or reference" in downstream
+    assert "max_depth" in downstream
+    assert "transitive" in downstream
+    assert "workspace-relative" in downstream
+
+
+@pytest.mark.anyio
 async def test_get_codebase_map_returns_tree(server):
     result = await server.call_tool("get_codebase_map", {"max_depth": 1})
     payload = json.loads(result.content[0].text)

@@ -250,6 +250,18 @@ async def test_upstream_refs(server):
 
 
 @pytest.mark.anyio
+async def test_upstream_refs_are_reference_sites(server):
+    # Upstream returns the direct reference sites: the file/line where the
+    # queried symbol is called or used (its dependents/callers), not the
+    # symbol's own dependencies.
+    spots = _list_blocks(
+        await server.call_tool("get_upstream_refs", {"symbol_name": "helper"})
+    )
+    assert any(s["file"] == "src/app.py" for s in spots)
+    assert all(s["line"] >= 1 for s in spots)
+
+
+@pytest.mark.anyio
 async def test_upstream_refs_not_found(server):
     with pytest.raises(ToolError, match="symbol not found"):
         await server.call_tool("get_upstream_refs", {"symbol_name": "nope"})

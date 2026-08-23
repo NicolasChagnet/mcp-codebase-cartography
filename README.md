@@ -56,8 +56,8 @@ The various exposed tools by this server are:
 
 - `get_symbol_definition(symbol_name: string, file_path: string | undefined)`: Fetches the implementation code for a single symbol by name without returning the rest of the file. Returns the extracted source string of the AST node.
 
-- `get_downstream_refs(symbol_key: string, max_depth: int = 2)`: Performs a BFS search on the graph to list all downstream callers up to N steps deep. Helps evaluate impact before modifying code. Returns a list of caller symbols, file locations, and graph impact paths.
+- `get_upstream_refs(symbol_name: string)`: Returns the reference sites for a symbol — every file and line where the queried symbol is referenced, called, or used. These are the symbol's direct dependents/callers. Paths are workspace-relative. Resolution is name-based/lexical; if the name is defined in multiple files, an ambiguity error is raised. Returns a list of `{file, line, context}`.
 
-- `get_upstream_refs(symbol_name: string)`: Finds all spots referencing this symbol in the codebase. Returns a list of files, line numbers, and caller contexts.
+- `get_downstream_refs(symbol_key: string, max_depth: int = 2)`: Returns the transitive callers/impact of a symbol — the symbols and files that depend on, call, or reference the queried symbol, traversed up to `max_depth` hops. Helps evaluate impact before modifying code. Paths are workspace-relative. Resolution is name-based/lexical; pass `file:name` to disambiguate. Returns `{callers: [{symbol, kind, file, line_start, line_end, depth}], paths: [{path}]}`.
 
 - `get_ast_diff(base_ref: string = "HEAD")`: Summarizes code changes structurally across commits or uncommitted working trees. Filters out formatting and whitespace changes. Returns a text summary listing modified, added, or deleted functions/classes.

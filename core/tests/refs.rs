@@ -115,3 +115,18 @@ fn downstream_is_deterministic() {
     let b = get_downstream_refs(&mut engine, "leaf", 2).unwrap();
     assert_eq!(a, b);
 }
+
+#[test]
+fn ambiguous_name_reports_files() {
+    let tmp = TempDir::new();
+    write(&tmp, "a.rs", "pub fn shared() {}\n");
+    write(&tmp, "b.rs", "pub fn shared() {}\n");
+    let mut engine = core::Engine::new(tmp.path()).unwrap();
+
+    match get_downstream_refs(&mut engine, "shared", 2) {
+        Err(RefError::Ambiguous { files }) => {
+            assert_eq!(files, vec!["a.rs", "b.rs"]);
+        }
+        other => panic!("expected Ambiguous, got {other:?}"),
+    }
+}

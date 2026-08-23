@@ -93,8 +93,10 @@ impl From<std::io::Error> for RefError {
 /// Find all spots referencing `symbol_name` across the codebase.
 ///
 /// Returns every identifier/call site whose text matches the symbol name,
-/// with file, line, and the surrounding source line as context. Errors with
-/// [`RefError::NotFound`] if no definition with that name exists.
+/// with file, line, and the surrounding source line as context. These are the
+/// symbol's direct dependents/callers (who references, calls, or uses it).
+/// Paths are workspace-relative. Errors with [`RefError::NotFound`] if no
+/// definition with that name exists.
 pub fn get_upstream_refs(engine: &mut Engine, symbol_name: &str) -> Result<Vec<RefSpot>, RefError> {
     let graph = SymbolGraph::build(engine)?;
     if !graph.has_name(symbol_name) {
@@ -105,9 +107,12 @@ pub fn get_upstream_refs(engine: &mut Engine, symbol_name: &str) -> Result<Vec<R
 
 /// List all downstream callers of `symbol_key` up to `max_depth` hops.
 ///
-/// `symbol_key` is either a bare symbol name or `file:name` to disambiguate.
-/// Performs a bounded BFS over the reference graph following reverse edges
-/// (who references the symbol), returning caller records and impact paths.
+/// Returns the transitive callers/impact of the queried symbol: the symbols
+/// and files that depend on, call, or reference it, walked up to `max_depth`
+/// hops. `symbol_key` is either a bare symbol name or `file:name` to
+/// disambiguate. Performs a bounded BFS over the reference graph following
+/// reverse edges (who references the symbol), returning caller records and
+/// impact paths. Paths are workspace-relative.
 pub fn get_downstream_refs(
     engine: &mut Engine,
     symbol_key: &str,

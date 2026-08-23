@@ -56,12 +56,12 @@ def build_server(root: str | None = None) -> MCPServer:
 
     @server.tool()
     async def get_upstream_refs(symbol_name: str) -> list:
-        """Find all spots referencing this symbol in the codebase."""
+        """Return the reference sites for a symbol: every file and line where the queried symbol is referenced, called, or used. These are the symbol's direct dependents/callers. Paths are workspace-relative. Resolution is name-based/lexical; if the name is defined in multiple files, an ambiguity error is raised."""
         return engine.get_upstream_refs(symbol_name)
 
     @server.tool()
     async def get_downstream_refs(symbol_key: str, max_depth: int = 2) -> dict:
-        """List all downstream callers up to N steps deep."""
+        """Return the transitive callers/impact of a symbol: the symbols and files that depend on, call, or reference the queried symbol, traversed up to max_depth hops. Returns caller records and impact paths. Paths are workspace-relative. Resolution is name-based/lexical; pass `file:name` to disambiguate."""
         return engine.get_downstream_refs(symbol_key, max_depth)
 
     @server.tool()
